@@ -1,6 +1,13 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define SERIAL_DATA		(*(volatile unsigned char *)0x80000000)
+#define SERIAL_READSIZE		(*(volatile unsigned short *)0x80000002)
+#define SERIAL_WRITESIZE	(*(volatile unsigned short *)0x80000006)
+
+#define GPIO_PORT (*(volatile unsigned char *)0x81000000)
+#define GPIO_CTRL (*(volatile unsigned char *)0x81000004)
+
 void *malloc(size_t size);
 int strcmp(const char* s1, const char* s2);
 
@@ -20,6 +27,7 @@ void gpio_write(uint8_t pin, uint8_t value);
 uint8_t gpio_read(uint8_t pin);
 
 /* UART */
+
 void serial_out_string(char *s);
 int mprintf(const char *format, ...);
 

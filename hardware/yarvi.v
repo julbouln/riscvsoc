@@ -274,12 +274,12 @@ module yarvi( input  wire        clk
    integer i,j;
    initial begin
       for (i=0;i<8;i=i+1) begin
-	 	for(j=0;j<`MEM_SIZE;j=j+1) begin
-	    	mem0[j][i] = 32'h 0;
-	    	mem1[j][i] = 32'h 0;
-	    	mem2[j][i] = 32'h 0;
-	    	mem3[j][i] = 32'h 0;
-		end
+    	 	for(j=0;j<`MEM_SIZE;j=j+1) begin
+	       	mem0[j][i] = 32'h 0;
+	       	mem1[j][i] = 32'h 0;
+	    	  mem2[j][i] = 32'h 0;
+	    	  mem3[j][i] = 32'h 0;
+    		end
       end
    end
 
@@ -305,7 +305,7 @@ module yarvi( input  wire        clk
    integer k;
    initial begin
       for (k=0;k<32;k=k+1) begin
-	  regs[k] = 32'h 0;
+  	  regs[k] = 32'h 0;
       end
    end
    
@@ -390,7 +390,7 @@ module yarvi( input  wire        clk
    always @(posedge clk) begin
       de_valid  <= if_valid & !ex_flush;
       if(if_valid)
-		de_pc     <= if_pc;
+		    de_pc     <= if_pc;
       de_inst   <= if_inst;
    end
 
@@ -741,8 +741,7 @@ module yarvi( input  wire        clk
      $readmemh("out.txt", rom_mem);
    end
 
-//`define SIMULATION 1
-`ifdef SIMULATION
+
    reg  [31:0] ex_pc, ex_sb_imm, ex_i_imm, ex_s_imm, ex_uj_imm;
 
    always @(posedge clk) begin
@@ -756,13 +755,17 @@ module yarvi( input  wire        clk
    always @(posedge clk)
       if (de_valid)
         case (de_inst`opcode)
-          `LOAD:   $display("%05d  LOAD from %x (%x)", $time,
-                            de_load_addr, de_load_addr[28:`MEM_WIDTH]);
-        `STORE:
-                   $display("%05d  STORE to %x (%x != %x)", $time,
-                            de_store_addr,
-                            de_store_addr[31:`MEM_WIDTH+2], (`DATA_START >> (`MEM_WIDTH + 2)));
+          `LOAD:   $display("%05d LOAD from %x (%x)", $time,
+                            de_load_addr, readdata);
+          `STORE:
+                   $display("%05d STORE %x to %x", $time,
+                            writedata,
+                            de_store_addr
+                            );
         endcase
+//`define SIMULATION 1
+`ifdef SIMULATION
+
 
    always @(posedge clk) begin
       if (ex_valid)

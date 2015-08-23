@@ -98,8 +98,6 @@ void delay(int ms)
 }
 
 /* GPIO */
-#define GPIO_PORT (*(volatile unsigned char *)0x81000000)
-#define GPIO_CTRL (*(volatile unsigned char *)0x81000004)
 
 void gpio_mode(uint8_t pin, uint8_t mode)
 {	
@@ -123,10 +121,6 @@ uint8_t gpio_read(uint8_t pin)
 }
 
 /* UART */
-
-#define SERIAL_DATA		(*(volatile unsigned char *)0x80000000)
-#define SERIAL_READSIZE		(*(volatile unsigned short *)0x80000002)
-#define SERIAL_WRITESIZE	(*(volatile unsigned short *)0x80000006)
 
 static void serial_out_char(char ch)
 {

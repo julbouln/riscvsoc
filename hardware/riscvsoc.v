@@ -1,8 +1,16 @@
+`define memmap [29:22]
+`define ROM 'h00
+`define RAM 'h10
+`define UART 'h80
+`define GPIO 'h81
+`define SPI 'h82
+
 module riscvsoc
 
   (input         clk,
    output        serial_out,
-   input         serial_in);
+   input         serial_in, 
+   inout [7:0] gpio_port);
 
    wire          tx_busy;
 
@@ -32,6 +40,32 @@ module riscvsoc
      , .readdata        (readdata)
      );
 
+uart_controller uart_controller
+     ( .clk             (clk)
+      , .reset(reset)
+     , .serial_out      (serial_out)
+     , .serial_in       (serial_in)
+
+     , .rw         (address[0])
+     , .writeenable     (address`memmap == `UART & writeenable)
+     , .writedata       (writedata)
+     , .readenable      (address`memmap == `UART & readenable)
+     , .readdata        (readdata)
+//     , .dbg             (dbg)
+
+     );
+
+gpio_controller gpio_controller (
+       .clk(clk),
+       .ioport(gpio_port),
+       .writeenable(address`memmap == `GPIO & writeenable),
+       .readenable(address`memmap == `GPIO & readenable),
+       .rw(address[0]),
+       .writedata(writedata),
+       .readdata(gpio_readdata)
+       );
+
+/*
    rs232 rs232
      ( .clk             (clk)
      , .serial_out      (serial_out)
@@ -42,7 +76,10 @@ module riscvsoc
      , .writedata       (writedata)
      , .readenable      (readenable  & address[29])
      , .readdata        (readdata));
+*/
 
+
+//`define SIMULATION 1
 `ifdef SIMULATION
    always @(posedge clk)
       if (writeenable /* && address[29] */)

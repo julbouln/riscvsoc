@@ -6,11 +6,18 @@ int main(int argc, char** argv) {
 	int c=42;
 	char hello[5]="Hello";	
 		
-		
+
 //	spi_init();
-//	GPIO_CTRL = 0b00000001;
-//	gpio_mode(0,OUTPUT);
+	GPIO_CTRL = 0b00000011;
+//			GPIO_PORT=0b00000001;
+
 //	gpio_mode(1,OUTPUT);
+//	gpio_mode(0,OUTPUT);
+
+//		gpio_write(0,HIGH);
+//		gpio_write(1,LOW);
+
+	delay(5000);
 		
 	while(1)
 	{	
@@ -39,16 +46,15 @@ int main(int argc, char** argv) {
 		mprintf("mul : %d*%d=%d\n",a,b,a*b); 
 		mprintf("div : %d/%d=%d\n",c,a,c/a); 
 		
-		
-		
-//		GPIO_PORT=0b00000001;
+
+		GPIO_PORT=0b00000001;
 //		gpio_write(0,HIGH);
 //		gpio_write(1,LOW);
-		delay(1);
-//		GPIO_PORT=0b00000000;
+		delay(1000);
+		GPIO_PORT=0b00000010;
 //		gpio_write(0,LOW);
 //		gpio_write(1,HIGH);
-//		delay(1);
+		delay(1000);
 		
 	}
 	

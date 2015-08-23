@@ -13,16 +13,12 @@
 `timescale 1ns/10ps
 
 module test();
-   reg clock, reset = 1;
+   reg clock;
 
    always #5 clock = ~clock;
 
    riscvsoc riscvsoc(.clk(clock));
 
-   initial begin
-      #12
-      reset = 0;
-   end
    initial
      clock = 1;
 endmodule

@@ -13,8 +13,9 @@
 `timescale 1ns/10ps
 
 module top_riscvsoc(input CLK50, 
-					output PORTA0,
-					input PORTA1
+					output TX,
+					input RX,
+					output [7:0] LEDS
 );
 wire clk100;
 /*
@@ -25,6 +26,7 @@ BUFG buf100 (.I(clk100dcm), .O(clk100));
 */
 clk_100 clk_100(.CLK_IN1(CLK50),.CLK_OUT1(clk100));
 
-riscvsoc riscvsoc(.clk(clk100),.serial_out(PORTA0),.serial_in(PORTA1));
+riscvsoc riscvsoc(.clk(clk100),.serial_out(TX),.serial_in(RX),.gpio_port(LEDS));
 
+//assign LED=!TX;
 endmodule
