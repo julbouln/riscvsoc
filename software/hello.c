@@ -28,9 +28,16 @@ int main(int argc, char** argv) {
 		mprintf("read : %c",r);
 		*/
 		mprintf("%d\n",csr_read(time));
-
+/*		char c=serial_in_char();
+		while(c>-1) {
+			serial_out_char(c);
+			c=serial_in_char();
+		}
+*/
 //		mprintf("b%de",43);
 		
+//		if(SERIAL_READSIZE)
+//			mprintf("receive %c\n",SERIAL_DATA);
 		
 		mprintf("test int %d\n",43);
 		mprintf("test var int %d\n",a);

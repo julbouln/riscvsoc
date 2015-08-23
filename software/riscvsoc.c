@@ -122,18 +122,19 @@ uint8_t gpio_read(uint8_t pin)
 
 /* UART */
 
-static void serial_out_char(char ch)
+void serial_out_char(char ch)
 {
    while (SERIAL_WRITESIZE == 0)
         ;
     SERIAL_DATA = ch;
 }
 
-static char serial_in_char(void)
+char serial_in_char(void)
 {
-    while (SERIAL_READSIZE == 0)
-        ;
-    return SERIAL_DATA;
+    if (SERIAL_READSIZE)
+	    return SERIAL_DATA;
+	else
+		return -1;
 }
 
 void serial_out_string(char *s)

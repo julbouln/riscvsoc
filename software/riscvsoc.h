@@ -28,6 +28,9 @@ uint8_t gpio_read(uint8_t pin);
 
 /* UART */
 
+char serial_in_char(void);
+
+void serial_out_char(char c);
 void serial_out_string(char *s);
 int mprintf(const char *format, ...);
 

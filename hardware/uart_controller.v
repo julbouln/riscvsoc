@@ -11,11 +11,16 @@ module uart_controller(input  clk,
 //    ,output [7:0] dbg
     );
 
-
+wire [7:0] rx_byte;
 wire tx_busy;
 
- reg received;
-reg recv_error;
+//assign rx_byte;
+// = readdata[7:0];
+
+ wire is_receiving;
+
+ wire received;
+wire recv_error;
 
   uart uart(
     .clk(clk),
@@ -24,17 +29,17 @@ reg recv_error;
     .tx(serial_out),
     .transmit(writeenable),
     .tx_byte(writedata[7:0]),
-//    .received(received),
-//    .rx_byte(readdata[7:0]),
-    .is_receiving(readenable),
-    .is_transmitting(tx_busy)
-//    .recv_error(recv_error)
+    .received(received),
+    .rx_byte(rx_byte),
+    .is_receiving(is_receiving),
+    .is_transmitting(tx_busy),
+    .recv_error(recv_error)
     );
 
   always @(posedge clk)
 //      if (readenable)
          case (rw)
-//         0: readdata <= {15'd0, pending_avail, pending_avail, 7'd0, pending_data};
+         0: readdata <= {15'd0, is_receiving, is_receiving, 7'd0, rx_byte};
          1: readdata <= {15'd0, !tx_busy, 16'd0};
          endcase
   //    else
