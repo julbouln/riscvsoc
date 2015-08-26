@@ -15,7 +15,7 @@
 module test();
    reg clock;
 
-   always #5 clock = ~clock;
+   always #1 clock = ~clock;
 
    riscvsoc riscvsoc(.clk(clock));
 

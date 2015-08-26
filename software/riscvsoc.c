@@ -5,6 +5,7 @@
 #include "riscvsoc.h"
 
 // should give terrible performance
+/*
 #ifndef M_EXTENSION
 uint32_t __umodsi3(uint32_t num, uint32_t den)
 {
@@ -65,13 +66,21 @@ uint32_t __mulsi3 (uint32_t a, uint32_t b)
 	return r;
 }
 #endif
+*/
 /* TIMING */
 
-/*
+// minimal malloc - memory will never bee freed ...
+
+char malloc_ini;
 char *malloc_ptr;
 void *malloc(size_t size)
 {
   void *ret;
+
+  if(!malloc_ptr) {
+  	malloc_ptr=&malloc_ini;
+  }
+
   ret = (void*)malloc_ptr;
   malloc_ptr += size;
   return ret;
@@ -84,17 +93,56 @@ int strcmp(const char* s1, const char* s2)
         s1++,s2++;
     return *(const unsigned char*)s1-*(const unsigned char*)s2;
 }
-*/
+
+void *memcpy(char *dest, const char *src, int n)
+{
+	while (n--)
+		*(dest++) = *(src++);
+}
+
+char *strcpy(char *dest, const char *src)
+{
+	char *ret = dest;
+	// printf("[strcpy()]");
+	do
+		*(dest++) = *src;
+	while (*(src++));
+	return ret;
+}
+
 #define TIME_TICK 100000 // 50Mhz
 
-int time(int *t) {
-	return csr_read(time);
+long csr_time()
+{
+return csr_read(time);
+}
+
+long csr_timeh()
+{
+return csr_read(timeh);
+}
+
+long time() {
+	return ((csr_timeh() << 32) | csr_time());
+/*	int cycles;
+	__asm__ __volatile__("rdcycle %0" : "=r"(cycles));
+	// printf("[time() -> %d]", cycles);
+	return cycles;
+*/
+}
+
+long insn()
+{
+	int insns;
+	__asm__ __volatile__("rdinstret %0" : "=r"(insns));
+	// printf("[insn() -> %d]", insns);
+	return insns;
 }
 
 void delay(int ms)
 {
-	int t=csr_read(time)+(ms*TIME_TICK);
-	while(csr_read(time) < t);
+	int t=time()+(ms*TIME_TICK);
+	while(time() < t);
 }
 
 /* GPIO */
@@ -318,7 +366,7 @@ static int print(char **out, const char *format, va_list args )
 	return pc;
 }
 
-int mprintf(const char *format, ...)
+int printf(const char *format, ...)
 {
         va_list args;
         
@@ -326,12 +374,22 @@ int mprintf(const char *format, ...)
         return print( 0, format, args );
 }
 
-int msprintf(char *out, const char *format, ...)
+int sprintf(char *out, const char *format, ...)
 {
         va_list args;
         
         va_start( args, format );
         return print( &out, format, args );
+}
+
+int scanf(const char *format, ...)
+{
+	// printf("[scanf(\"%s\")]\n", format);
+	va_list ap;
+	va_start(ap, format);
+	*va_arg(ap,int*) = 1000000;
+	va_end(ap);
+	return 0;
 }
 
 /* SPI */

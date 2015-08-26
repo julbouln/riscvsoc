@@ -25,6 +25,7 @@ defparam dcm100.CLKIN_PERIOD = 20.0;
 BUFG buf100 (.I(clk100dcm), .O(clk100));
 */
 clk_100 clk_100(.CLK_IN1(CLK50),.CLK_OUT1(clk100));
+//clk_200 clk_200(.CLK_IN1(CLK50),.CLK_OUT1(clk100));
 
 riscvsoc riscvsoc(.clk(clk100),.serial_out(TX),.serial_in(RX),.gpio_port(LEDS));
 

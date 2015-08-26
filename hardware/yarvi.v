@@ -150,6 +150,15 @@ There are two obvious directions from here:
 `define CSRRSI          6
 `define CSRRCI          7
 
+// M extension
+`define MUL 0
+`define MULH 1
+`define MULHSU 2
+`define MULHU 3
+`define DIV 4
+`define DIVU 5
+`define REM 6
+`define REMU 7
 
 `define opext    [1 : 0]
 `define opcode   [6 : 2]
@@ -231,14 +240,6 @@ There are two obvious directions from here:
 `define TRAP_STORE_MISALIGN     9
 `define TRAP_LOAD_FAULT         10
 `define TRAP_STORE_FAULT        11
-
-`ifndef CONFIG_BYPASS
-`define CONFIG_BYPASS  1
-`endif
-`ifndef CONFIG_PIPELINE
-`define CONFIG_PIPELINE 0  // requires CONFIG_BYPASS
-`endif
-
 
 `define MEM_WIDTH 12
 `define MEM_SIZE 2**`MEM_WIDTH
@@ -346,8 +347,17 @@ module yarvi( input  wire        clk
        endcase
 
    /* Forward declarations */
+/*   wire ex_wben = ex_valid && ex_inst`rd &&
+                         ex_inst`opcode != `BRANCH && ex_inst`opcode != `STORE;
+   wire [31:0] ex_wbv = ex_inst`opcode == `LOAD ? ex_ld_res : ex_res;
+*/
+
    reg         ex_wben;
    reg  [31:0] ex_wbv;
+
+   always @(*) ex_wbv = ex_inst`opcode == `LOAD ? ex_ld_res : ex_res;
+   always @(*) ex_wben = ex_valid && ex_inst`rd &&
+                         ex_inst`opcode != `BRANCH && ex_inst`opcode != `STORE;
 
    reg         ex_valid            = 0;
    reg         ex_flush            = 0;
@@ -359,26 +369,23 @@ module yarvi( input  wire        clk
    reg         if_valid            = 0;
    reg  [31:0] if_pc;
 
-   reg [31:0] if_inst;
+//   reg [31:0] if_inst;
 
-   always @(posedge clk) begin   
-      if (`CONFIG_PIPELINE) begin
-        if_valid <= ex_restart | if_valid;
-        if_pc    <= ex_restart ? ex_next_pc : if_pc + 4;
-      end else begin
+   wire [31:0] if_inst = rom_mem[if_pc[`ROM_WIDTH+1:2]];
+
+   always @(posedge clk) begin
         if_valid <= ex_restart | ex_valid;
         if_pc    <= ex_next_pc;
-      end
 
       // XXXXX
 //      if (ex_restart)
   //       $display("%05d  RESTARTING FROM %x", $time, ex_next_pc);
    end
    
-   always @(*) begin
-	  if_inst = rom_mem[if_pc[`ROM_WIDTH+1:2]];
+/*   always @(*) begin
+  	  if_inst = rom_mem[if_pc[`ROM_WIDTH+1:2]];
    end
-
+*/
 //// DECODE AND REGISTER FETCH ////
 
    reg         de_valid;
@@ -387,18 +394,34 @@ module yarvi( input  wire        clk
 
    reg  [31:0] de_csr_val;
 
+/*
+reg [ 3:0] de_bytemask;
+reg [ 3:0] de_byteena;
+reg de_store;
+reg de_store_local;
+*/
    always @(posedge clk) begin
       de_valid  <= if_valid & !ex_flush;
       if(if_valid)
 		    de_pc     <= if_pc;
       de_inst   <= if_inst;
+
+/*
+      de_bytemask <= de_inst`funct3 == 0 ? 4'd 1 : 
+                   de_inst`funct3 == 1 ? 4'd 3 : 4'd 15;
+      de_byteena <= de_bytemask << de_store_addr[1:0];
+
+      de_store <= de_valid && de_inst`opcode == `STORE;
+      de_store_local  <= de_store && de_store_addr[31:24] == 'h10;
+      */
    end
+
 
    wire [31:0] de_rs1_val_r    = regs[de_inst`rs1];
    wire [31:0] de_rs2_val_r    = regs[de_inst`rs2];
 
-   wire        de_rs1_forward  = `CONFIG_BYPASS && de_inst`rs1 == ex_inst`rd && ex_wben;
-   wire        de_rs2_forward  = `CONFIG_BYPASS && de_inst`rs2 == ex_inst`rd && ex_wben;
+   wire        de_rs1_forward  = de_inst`rs1 == ex_inst`rd && ex_wben;
+   wire        de_rs2_forward  = de_inst`rs2 == ex_inst`rd && ex_wben;
 
    wire [31:0] de_rs1_val      = de_rs1_forward ? ex_wbv : de_rs1_val_r;
    wire [31:0] de_rs2_val      = de_rs2_forward ? ex_wbv : de_rs2_val_r;
@@ -428,10 +451,11 @@ module yarvi( input  wire        clk
 
    wire [31:0] de_rs2_val_or_imm = de_inst`opcode == `OP_IMM ? de_i_imm : de_rs2_val;
 
+
    wire [31:0] de_load_addr    = de_rs1_val + de_i_imm;
    wire [31:0] de_store_addr   = de_rs1_val + de_s_imm;
-   wire [`MEM_WIDTH-1:0]
-               de_store_ea     = de_store_addr[`MEM_WIDTH+1:2];
+   wire [`MEM_WIDTH-1:0] de_store_ea     = de_store_addr[`MEM_WIDTH+1:2];
+
    wire [ 3:0] de_bytemask     = de_inst`funct3 == 0 ? 4'd 1 : 
    								 de_inst`funct3 == 1 ? 4'd 3 : 4'd 15;
 								 
@@ -439,10 +463,11 @@ module yarvi( input  wire        clk
    wire        de_store        = de_valid && de_inst`opcode == `STORE;
    wire        de_store_local  = de_store && de_store_addr[31:24] == 'h10;
    
-//   wire [4:0] de_store_addr_shift = de_store_addr[1:0] << 3;
-//   wire [31:0] de_rs2_val_shl  = de_rs2_val << de_store_addr_shift;
+   wire [4:0] de_store_addr_shift = de_store_addr[1:0] << 3;
+   wire [31:0] de_rs2_val_shl  = de_rs2_val << de_store_addr_shift;
 
-   wire [31:0] de_rs2_val_shl  = de_rs2_val << (de_store_addr[1:0] * 8);
+//   wire [31:0] de_rs2_val_shl  = de_rs2_val << (de_store_addr[1:0] * 8);
+//   wire [31:0] de_rs2_val_shl  = de_rs2_val << (de_store_addr[1:0] << 3);
 
    reg [11:0] de_csrd;
 
@@ -513,21 +538,33 @@ module yarvi( input  wire        clk
    // it. Similar for store.  Of course, IO access must still be
    // aligned as well as atomics.
 
-   reg [31:0] 		    ex_ld;
-   
-   reg  [31:0] ex_ld_shifted, ex_ld_res;
+   reg [31:0] ex_ld;
+   reg  [31:0] ex_ld_res;
+
+   wire [4:0] ex_load_addr_shift = ex_load_addr[1:0] << 3;
+   wire  [31:0] ex_ld_shifted = ex_ld >> ex_load_addr_shift;
 
    always @(*) begin
    	if(ex_valid) begin
+      case(ex_load_addr[31:24])
+        'h00: ex_ld = rom_mem[ex_load_addr[`ROM_WIDTH+1:2]];
+        'h10: ex_ld = {mem3[ex_load_ea], mem2[ex_load_ea], mem1[ex_load_ea], mem0[ex_load_ea]};
+        default: ex_ld = readdata;
+      endcase
+
+        /*
       if(ex_load_addr[31:28]=='b0000)
-   		ex_ld = rom_mem[ex_load_addr[`ROM_WIDTH+1:2]];
+     		ex_ld = rom_mem[ex_load_addr[`ROM_WIDTH+1:2]];
       else
    		if(ex_load_addr[31:24]=='h10)
    	  		ex_ld = {mem3[ex_load_ea], mem2[ex_load_ea], mem1[ex_load_ea], mem0[ex_load_ea]};
    		else
    			ex_ld = readdata;
-
-      ex_ld_shifted = ex_ld >> (ex_load_addr[1:0] * 8);
+*/
+//      ex_ld_shifted = ex_ld >> ex_load_addr_shift;
+//      ex_ld_shifted = ex_ld >> (ex_load_addr[1:0] * 8);
+//      ex_ld_shifted = ex_ld >> (ex_load_addr[1:0] << 3);
+  
       case (ex_inst`funct3)
          0: ex_ld_res = {{24{ex_ld_shifted[ 7]}}, ex_ld_shifted[ 7:0]};
          1: ex_ld_res = {{16{ex_ld_shifted[15]}}, ex_ld_shifted[15:0]};
@@ -553,7 +590,9 @@ module yarvi( input  wire        clk
       if (de_valid)
         case (de_inst`opcode)
         `BRANCH:
-          if (de_branch_taken) begin
+          if (de_branch_taken) 
+//          if((de_inst`br_rela ? (de_rs1_val_cmp  < de_rs2_val_cmp) : (de_rs1_val == de_rs2_val)) ^ de_inst`br_negate)
+          begin
             ex_flush      <= 1;
             ex_restart    <= 1;
             ex_next_pc    <= de_pc + de_sb_imm;
@@ -644,10 +683,6 @@ module yarvi( input  wire        clk
       endcase
 
 //// WRITE BACK ////
-
-   always @(*) ex_wbv = ex_inst`opcode == `LOAD ? ex_ld_res : ex_res;
-   always @(*) ex_wben = ex_valid && ex_inst`rd &&
-                         ex_inst`opcode != `BRANCH && ex_inst`opcode != `STORE;
 
    always @(posedge clk)
       if (ex_wben)
@@ -741,6 +776,8 @@ module yarvi( input  wire        clk
      $readmemh("out.txt", rom_mem);
    end
 
+//`define SIMULATION 1
+`ifdef SIMULATION
 
    reg  [31:0] ex_pc, ex_sb_imm, ex_i_imm, ex_s_imm, ex_uj_imm;
 
@@ -763,9 +800,6 @@ module yarvi( input  wire        clk
                             de_store_addr
                             );
         endcase
-//`define SIMULATION 1
-`ifdef SIMULATION
-
 
    always @(posedge clk) begin
       if (ex_valid)

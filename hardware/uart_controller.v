@@ -53,4 +53,11 @@ assign dbg[5]=writedata[0];
 assign dbg[6]=writedata[1];
 assign dbg[7]=1;
 */
+
+always @(posedge clk) begin
+      if (writeenable && rw == 0)
+//         $display("UART WROTE %x (%c)", writedata[7:0], writedata[7:0]);
+$write("%c",writedata[7:0]);
+         end
+
 endmodule

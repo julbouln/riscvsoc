@@ -1,6 +1,8 @@
 PROJECT=fpga_riscvsoc
 PART=xc6slx9-ftg256-3
 
+EXTRA_EFFORT=n
+
 all: ${PROJECT}_routed.bit
 
 project/${PROJECT}.prj:
@@ -15,6 +17,7 @@ project/${PROJECT}.prj:
 	echo "verilog work \"../gpio_controller.v\"" >> project/${PROJECT}.prj 
 	echo "verilog work \"../riscvsoc.v\"" >> project/${PROJECT}.prj 
 	echo "verilog work \"../clk_100.v\"" >> project/${PROJECT}.prj 
+#	echo "verilog work \"../clk_200.v\"" >> project/${PROJECT}.prj 
 	echo "verilog work \"../top_riscvsoc.v\"" >> project/${PROJECT}.prj 
 
 #	echo "verilog work \"../top.v\"" > project/${PROJECT}.prj
@@ -34,14 +37,17 @@ ${PROJECT}.ngd: ${PROJECT}.ngc
 
 ${PROJECT}.ncd: ${PROJECT}.ngd
 	cd project; map -convert_bram8 -w -intstyle ise -p ${PART} \
-	-detail -ir off -ignore_keep_hierarchy -pr b -timing -ol high -logic_opt on  \
+	-detail -ir off -ignore_keep_hierarchy -pr b -timing -ol high -xe ${EXTRA_EFFORT} -logic_opt on  \
 	-o ${PROJECT}.ncd ${PROJECT}.ngd ${PROJECT}.pcf 
 
 ${PROJECT}_routed.ncd: ${PROJECT}.ncd
-	cd project; par -w -intstyle ise -ol high ${PROJECT}.ncd ${PROJECT}_routed.ncd ${PROJECT}.pcf
+	cd project; par -w -intstyle ise -ol high -xe ${EXTRA_EFFORT} ${PROJECT}.ncd ${PROJECT}_routed.ncd ${PROJECT}.pcf
 
 ${PROJECT}_routed.bit: ${PROJECT}_routed.ncd
 	cd project; bitgen -f ${PROJECT}.ut ${PROJECT}_routed.ncd
+
+timing_report:
+	cd project; trce -v 12 -fastpaths -o design_timing_report ${PROJECT}_routed.ncd ${PROJECT}.pcf
 
 clean:
 	@rm -rf project
