@@ -8,7 +8,6 @@ module uart_controller(input  clk,
     input  wire [31:0] writedata,
     input  wire        readenable,
     output reg  [31:0] readdata = 32 'h eeee_eeee
-//    ,output [7:0] dbg
     );
 
 wire [7:0] rx_byte;
@@ -55,9 +54,9 @@ assign dbg[7]=1;
 */
 
 always @(posedge clk) begin
-      if (writeenable && rw == 0)
+  if (writeenable && rw == 0)
 //         $display("UART WROTE %x (%c)", writedata[7:0], writedata[7:0]);
-$write("%c",writedata[7:0]);
-         end
+    $write("%c",writedata[7:0]);
+  end
 
 endmodule

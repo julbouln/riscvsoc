@@ -12,7 +12,7 @@ hello:
 	riscv64-unknown-elf-objdump -D -x -S hello > hello.dis
 	riscv64-unknown-elf-objcopy -O ihex hello hello.hex
 #	srec_cat hello.hex -intel -byte-swap 4 -o out.hex -intel
-	srec_cat hello.hex -intel -byte-swap 4 --fill 0x00 0x00 0x54 -o out.a.txt -vmem --line-length=16 --data-only
+	srec_cat hello.hex -intel -byte-swap 4 -o out.a.txt -vmem --line-length=16 --data-only
 	cut -c 11-19 out.a.txt > out.txt
 #	./hex2coe out.hex out.coe
 
@@ -27,7 +27,7 @@ dhry:
 	riscv64-unknown-elf-objdump -D -x -S dhry > dhry.dis
 	riscv64-unknown-elf-objcopy -O ihex dhry dhry.hex
 #	srec_cat dhry.hex -intel -byte-swap 4 -o dhry.hex -intel
-	srec_cat dhry.hex -intel -byte-swap 4 --fill 0x00 0x00 0x54 -o dhry.a.txt -vmem --line-length=16 --data-only
+	srec_cat dhry.hex -intel -byte-swap 4 -o dhry.a.txt -vmem --line-length=16 --data-only
 	cut -c 11-19 dhry.a.txt > dhry.txt
 
 clean:

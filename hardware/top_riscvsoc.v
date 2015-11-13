@@ -29,5 +29,6 @@ clk_100 clk_100(.CLK_IN1(CLK50),.CLK_OUT1(clk100));
 
 riscvsoc riscvsoc(.clk(clk100),.serial_out(TX),.serial_in(RX),.gpio_port(LEDS));
 
-//assign LED=!TX;
+
+assign LEDS=8'h0;
 endmodule

@@ -241,48 +241,48 @@ There are two obvious directions from here:
 `define TRAP_LOAD_FAULT         10
 `define TRAP_STORE_FAULT        11
 
-`define MEM_WIDTH 12
-`define MEM_SIZE 2**`MEM_WIDTH
+//`define MEM_WIDTH 12
+//`define MEM_SIZE 2**`MEM_WIDTH
 
-`define ROM_WIDTH 12
-`define ROM_SIZE 2**`ROM_WIDTH
+//`define ROM_WIDTH 12
+//`define ROM_SIZE 2**`ROM_WIDTH
 
-`define INIT_PC 'h0080_0054
+`define INIT_PC 'h0080_0000
 `define DATA_START 32'h0080_0000
 
 
 module yarvi( input  wire        clk
             , input  wire        reset
-
+/*
             , output reg  [29:0] address
             , output reg         writeenable = 0
             , output reg  [31:0] writedata
             , output reg  [ 3:0] byteena
             , output reg         readenable = 0
             , input  wire [31:0] readdata
+            */
+            // wishbone interface
+            , output [29:0] imem_addr_o
+            , output [31:0] imem_data_o
+            , input [31:0] imem_data_i
+            , output imem_stb_o
+            , output imem_cyc_o
+            , output imem_we_o
+            , input imem_ack_i
+            , output [3:0] imem_sel_o
+
+            , output reg [29:0] dmem_addr_o
+            , output reg [31:0] dmem_data_o
+            , input [31:0] dmem_data_i
+            , output reg dmem_stb_o
+            , output dmem_cyc_o
+            , output reg dmem_we_o
+            , input dmem_ack_i
+            , output reg [3:0] dmem_sel_o
+
             );
 
    /* Global state */
-
-   reg  [31:0] rom_mem [`ROM_SIZE-1:0];
-
-   reg  [ 7:0] mem0[`MEM_SIZE-1:0];
-   reg  [ 7:0] mem1[`MEM_SIZE-1:0];
-   reg  [ 7:0] mem2[`MEM_SIZE-1:0];
-   reg  [ 7:0] mem3[`MEM_SIZE-1:0];
-
-// init mem
-   integer i,j;
-   initial begin
-      for (i=0;i<8;i=i+1) begin
-    	 	for(j=0;j<`MEM_SIZE;j=j+1) begin
-	       	mem0[j][i] = 32'h 0;
-	       	mem1[j][i] = 32'h 0;
-	    	  mem2[j][i] = 32'h 0;
-	    	  mem3[j][i] = 32'h 0;
-    		end
-      end
-   end
 
    /* CPU state.  These are a special-case of pipeline registers.  As
       they are only (and must only be) written by the EX stage, we
@@ -371,9 +371,18 @@ module yarvi( input  wire        clk
 
 //   reg [31:0] if_inst;
 
-   wire [31:0] if_inst = rom_mem[if_pc[`ROM_WIDTH+1:2]];
+  assign imem_stb_o = 1'b1;
+  assign imem_addr_o = ex_next_pc[31:2];
+  assign imem_sel_o = 4'b1111;
+  assign imem_we_o = 1'b0;
+  assign imem_cyc_o = imem_stb_o;
+
+  assign dmem_cyc_o = dmem_stb_o;
+
+  wire [31:0] if_inst = imem_data_i;
 
    always @(posedge clk) begin
+//        $display("%x %x",if_pc,imem_data_i);
         if_valid <= ex_restart | ex_valid;
         if_pc    <= ex_next_pc;
 
@@ -382,10 +391,7 @@ module yarvi( input  wire        clk
   //       $display("%05d  RESTARTING FROM %x", $time, ex_next_pc);
    end
    
-/*   always @(*) begin
-  	  if_inst = rom_mem[if_pc[`ROM_WIDTH+1:2]];
-   end
-*/
+
 //// DECODE AND REGISTER FETCH ////
 
    reg         de_valid;
@@ -394,26 +400,11 @@ module yarvi( input  wire        clk
 
    reg  [31:0] de_csr_val;
 
-/*
-reg [ 3:0] de_bytemask;
-reg [ 3:0] de_byteena;
-reg de_store;
-reg de_store_local;
-*/
    always @(posedge clk) begin
       de_valid  <= if_valid & !ex_flush;
-      if(if_valid)
-		    de_pc     <= if_pc;
+//      if(if_valid)
+		  de_pc     <= if_pc;
       de_inst   <= if_inst;
-
-/*
-      de_bytemask <= de_inst`funct3 == 0 ? 4'd 1 : 
-                   de_inst`funct3 == 1 ? 4'd 3 : 4'd 15;
-      de_byteena <= de_bytemask << de_store_addr[1:0];
-
-      de_store <= de_valid && de_inst`opcode == `STORE;
-      de_store_local  <= de_store && de_store_addr[31:24] == 'h10;
-      */
    end
 
 
@@ -454,7 +445,7 @@ reg de_store_local;
 
    wire [31:0] de_load_addr    = de_rs1_val + de_i_imm;
    wire [31:0] de_store_addr   = de_rs1_val + de_s_imm;
-   wire [`MEM_WIDTH-1:0] de_store_ea     = de_store_addr[`MEM_WIDTH+1:2];
+   wire [29:0] de_store_ea     = de_store_addr[31:2];
 
    wire [ 3:0] de_bytemask     = de_inst`funct3 == 0 ? 4'd 1 : 
    								 de_inst`funct3 == 1 ? 4'd 3 : 4'd 15;
@@ -528,9 +519,14 @@ reg de_store_local;
       ex_inst      <= de_inst;
       ex_load_addr <= de_load_addr;
       ex_csrd      <= de_csrd;
+      /*
+      if(de_valid & !ex_flush) begin
+        dmem_addr_o <= de_load_addr[31:2];
+      end
+*/
    end
 
-   wire [`MEM_WIDTH-1:0] ex_load_ea = ex_load_addr[`MEM_WIDTH+1:2];
+   wire [29:0] ex_load_ea = ex_load_addr[31:2];
 
    // XXX It would be easy to support unaligned memory
    // with this setup by just calculating a different ex_load_ea for
@@ -538,33 +534,16 @@ reg de_store_local;
    // it. Similar for store.  Of course, IO access must still be
    // aligned as well as atomics.
 
-   reg [31:0] ex_ld;
+//   reg [31:0] ex_ld;
    reg  [31:0] ex_ld_res;
 
    wire [4:0] ex_load_addr_shift = ex_load_addr[1:0] << 3;
-   wire  [31:0] ex_ld_shifted = ex_ld >> ex_load_addr_shift;
+   wire [31:0] ex_ld_shifted = ex_ld >> ex_load_addr_shift;
+
+   wire [31:0] ex_ld = dmem_data_i;
 
    always @(*) begin
    	if(ex_valid) begin
-      case(ex_load_addr[31:24])
-        'h00: ex_ld = rom_mem[ex_load_addr[`ROM_WIDTH+1:2]];
-        'h10: ex_ld = {mem3[ex_load_ea], mem2[ex_load_ea], mem1[ex_load_ea], mem0[ex_load_ea]};
-        default: ex_ld = readdata;
-      endcase
-
-        /*
-      if(ex_load_addr[31:28]=='b0000)
-     		ex_ld = rom_mem[ex_load_addr[`ROM_WIDTH+1:2]];
-      else
-   		if(ex_load_addr[31:24]=='h10)
-   	  		ex_ld = {mem3[ex_load_ea], mem2[ex_load_ea], mem1[ex_load_ea], mem0[ex_load_ea]};
-   		else
-   			ex_ld = readdata;
-*/
-//      ex_ld_shifted = ex_ld >> ex_load_addr_shift;
-//      ex_ld_shifted = ex_ld >> (ex_load_addr[1:0] * 8);
-//      ex_ld_shifted = ex_ld >> (ex_load_addr[1:0] << 3);
-  
       case (ex_inst`funct3)
          0: ex_ld_res = {{24{ex_ld_shifted[ 7]}}, ex_ld_shifted[ 7:0]};
          1: ex_ld_res = {{16{ex_ld_shifted[15]}}, ex_ld_shifted[15:0]};
@@ -757,27 +736,43 @@ reg de_store_local;
     end
 
 //// MEMORY ACCESS ////
-   always @(posedge clk) if (de_store_local) begin
-      if (de_byteena[0]) mem0[de_store_ea] <= de_rs2_val_shl[ 7: 0];
-      if (de_byteena[1]) mem1[de_store_ea] <= de_rs2_val_shl[15: 8];
-      if (de_byteena[2]) mem2[de_store_ea] <= de_rs2_val_shl[23:16];
-      if (de_byteena[3]) mem3[de_store_ea] <= de_rs2_val_shl[31:24];
-   end
-
    always @(*) begin
-     writedata   = de_rs2_val_shl;
-     byteena     = de_byteena;
-     writeenable = de_store;
-     readenable  = de_valid && de_inst`opcode == `LOAD /* && de_store_addr[31] */;
-     address     = de_store ? de_store_addr[31:2] : de_load_addr[31:2];
-   end
+      if(de_valid) begin 
+        if (de_store_local) begin
+          dmem_sel_o = de_byteena;
+          dmem_stb_o = 1'b1;
+          dmem_we_o = 1'b1;
+          dmem_addr_o = de_store_ea;
+          dmem_data_o = de_rs2_val_shl;
+        end
+        else begin
+          if(de_store) begin
+            dmem_sel_o = 4'b1111;
+            dmem_stb_o = 1'b1;
+            dmem_we_o = 1'b1;
+            dmem_addr_o = de_store_addr[31:2];
+            dmem_data_o = de_rs2_val_shl;
+          end
+          else begin
+            dmem_sel_o = 4'b1111;
+            dmem_stb_o = 1'b1;
+            dmem_we_o = 1'b0;
+            dmem_addr_o = de_load_addr[31:2];
+          end
+        end
+      end
+      else begin
+        dmem_sel_o = 4'b1111;
+        dmem_stb_o = 1'b0;
+        dmem_we_o = 1'b0;
+      end
 
-   initial begin
-     $readmemh("out.txt", rom_mem);
    end
 
 //`define SIMULATION 1
+
 `ifdef SIMULATION
+
 
    reg  [31:0] ex_pc, ex_sb_imm, ex_i_imm, ex_s_imm, ex_uj_imm;
 
@@ -789,19 +784,21 @@ reg de_store_local;
       ex_uj_imm    <= de_uj_imm;
    end
 
+
    always @(posedge clk)
-      if (de_valid)
-        case (de_inst`opcode)
+      if (ex_valid)
+        case (ex_inst`opcode)
           `LOAD:   $display("%05d LOAD from %x (%x)", $time,
-                            de_load_addr, readdata);
+                            ex_load_addr, dmem_data_i);
           `STORE:
                    $display("%05d STORE %x to %x", $time,
-                            writedata,
+                            dmem_data_o,
                             de_store_addr
                             );
         endcase
 
    always @(posedge clk) begin
+//        $display("%x",if_pc,imem_data_i);
       if (ex_valid)
          case (ex_inst`opcode)
           `BRANCH:

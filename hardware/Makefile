@@ -13,8 +13,10 @@ project/${PROJECT}.prj:
 #	echo "verilog work \"../rs232.v\"" >> project/${PROJECT}.prj 
 	echo "verilog work \"../uart.v\"" >> project/${PROJECT}.prj 
 	echo "verilog work \"../yarvi.v\"" >> project/${PROJECT}.prj 
-	echo "verilog work \"../uart_controller.v\"" >> project/${PROJECT}.prj 
-	echo "verilog work \"../gpio_controller.v\"" >> project/${PROJECT}.prj 
+#	echo "verilog work \"../uart_controller.v\"" >> project/${PROJECT}.prj 
+#	echo "verilog work \"../gpio_controller.v\"" >> project/${PROJECT}.prj 
+	echo "verilog work \"../ram_wb.v\"" >> project/${PROJECT}.prj 
+	echo "verilog work \"../uart_wb.v\"" >> project/${PROJECT}.prj 
 	echo "verilog work \"../riscvsoc.v\"" >> project/${PROJECT}.prj 
 	echo "verilog work \"../clk_100.v\"" >> project/${PROJECT}.prj 
 #	echo "verilog work \"../clk_200.v\"" >> project/${PROJECT}.prj 
@@ -53,5 +55,5 @@ clean:
 	@rm -rf project
 #-DSIMULATION 
 sim:
-	iverilog -o /tmp/riscv uart.v yarvi.v uart_controller.v gpio_controller.v riscvsoc.v test_riscvsoc.v
+	iverilog -o /tmp/riscv uart.v yarvi.v ram_wb.v uart_wb.v gpio_controller.v riscvsoc.v test_riscvsoc.v
 	/tmp/riscv

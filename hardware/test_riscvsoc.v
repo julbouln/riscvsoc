@@ -19,6 +19,9 @@ module test();
 
    riscvsoc riscvsoc(.clk(clock));
 
-   initial
+   initial begin
      clock = 1;
+//     #10000 $finish();
+     end
+
 endmodule
